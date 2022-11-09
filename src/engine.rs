@@ -8,15 +8,15 @@ enum Ops {
     Mul,
 }
 
-pub struct Value {
+pub struct Scalar {
     data: f32,
     ops: Ops,
-    children: Vec<Value>,
+    children: Vec<Scalar>,
 }
 
-impl Value {
-    pub fn new(value: f32) -> Value {
-        Value {
+impl Scalar {
+    pub fn new(value: f32) -> Scalar {
+        Scalar {
             data: value,
             ops: Ops::New,
             children: Vec::new(),
@@ -24,10 +24,10 @@ impl Value {
     }
 }
 
-impl Add for Value {
+impl Add for Scalar {
     type Output = Self;
     fn add(self, right_value: Self) -> Self {
-        Value {
+        Scalar {
             data: self.data + right_value.data,
             ops: Ops::Add,
             children: vec![self, right_value],
@@ -35,10 +35,10 @@ impl Add for Value {
     }
 }
 
-impl Mul for Value {
+impl Mul for Scalar {
     type Output = Self;
     fn mul(self, right_value: Self) -> Self {
-        Value {
+        Scalar {
             data: self.data * right_value.data,
             ops: Ops::Mul,
             children: vec![self, right_value],
@@ -46,7 +46,7 @@ impl Mul for Value {
     }
 }
 
-impl fmt::Display for Value {
+impl fmt::Display for Scalar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Value(data={})", self.data)
     }
