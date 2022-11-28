@@ -24,9 +24,14 @@ pub struct ScalarData {
     left_child: Option<Scalar>,
     right_child: Option<Scalar>,
     ops: Ops,
+    visited_in_backprop: bool,
 }
 
 fn compute_grad(scalar: &mut ScalarData) {
+    if scalar.visited_in_backprop {
+        scalar.visited_in_backprop = false;
+    }
+
     match scalar.ops {
         Ops::Add => {
             if scalar.left_child.is_none() || scalar.right_child.is_none() {
@@ -101,6 +106,7 @@ impl Scalar {
             left_child: None,
             right_child: None,
             ops: Ops::Nil,
+            visited_in_backprop: false,
         })))
     }
 
@@ -124,6 +130,7 @@ impl Scalar {
             left_child: Some(self.clone()),
             right_child: None,
             ops: Ops::Exp,
+            visited_in_backprop: false,
         })))
     }
 
@@ -135,6 +142,7 @@ impl Scalar {
             left_child: None,
             right_child: None,
             ops: Ops::Nil,
+            visited_in_backprop: false,
         })));
 
         Scalar(Rc::new(RefCell::new(ScalarData {
@@ -143,36 +151,35 @@ impl Scalar {
             left_child: Some(self),
             right_child: Some(other),
             ops: Ops::Pow,
+            visited_in_backprop: false,
         })))
     }
 
     pub fn backward(&mut self) {
-        let mut scalar = self.0.borrow_mut();
-        scalar.grad = 1.0;
+        // TODO: Check if there is a non-recursive way of doing this
 
-        compute_grad(&mut scalar);
-        println!("{}", scalar);
+        let mut ordered_graph = Vec::new();
+        fn back(scalar: Scalar, ordered_graph: &mut Vec<Scalar>) {
+            if !scalar.0.borrow().visited_in_backprop {
+                scalar.0.borrow_mut().visited_in_backprop = true;
 
-        let mut nodes = Vec::new();
-        if !scalar.left_child.is_none() {
-            nodes.push(scalar.left_child.clone().unwrap());
+                if !scalar.0.borrow().right_child.is_none() {
+                    back(scalar.0.borrow().right_child.clone().unwrap(), ordered_graph);
                 }
-        if !scalar.right_child.is_none() {
-            nodes.push(scalar.right_child.clone().unwrap());
+                if !scalar.0.borrow().left_child.is_none() {
+                    back(scalar.0.borrow().left_child.clone().unwrap(), ordered_graph);
                 }
 
-        while nodes.len() > 0 {
-            let child = nodes.pop().unwrap();
-
-            compute_grad(&mut child.0.borrow_mut());
-            println!("{}", child);
-
-            if !child.0.borrow().left_child.is_none() {
-                nodes.push(child.0.borrow().left_child.clone().unwrap());
+                ordered_graph.push(scalar);
             }
-            if !child.0.borrow().right_child.is_none() {
-                nodes.push(child.0.borrow().right_child.clone().unwrap());
         }
+        back(self.clone(), &mut ordered_graph);
+
+        self.0.borrow_mut().grad = 1.0;
+        while ordered_graph.len() > 0 {
+            let s = ordered_graph.pop().unwrap();
+            compute_grad(&mut s.0.borrow_mut());
+            println!("{}", s);
         }
     }
 }
@@ -187,6 +194,7 @@ impl Add for Scalar {
             left_child: Some(self),
             right_child: Some(other),
             ops: Ops::Add,
+            visited_in_backprop: false,
         })))
     }
 }
@@ -201,6 +209,7 @@ impl<'a, 'b> Add<&'b Scalar> for &'a Scalar {
             left_child: Some(Scalar(Rc::clone(&self.0))),
             right_child: Some(Scalar(Rc::clone(&other.0))),
             ops: Ops::Add,
+            visited_in_backprop: false,
         })))
     }
 }
@@ -215,6 +224,7 @@ impl Mul for Scalar {
             left_child: Some(self),
             right_child: Some(other),
             ops: Ops::Mul,
+            visited_in_backprop: false,
         })))
     }
 }
@@ -244,6 +254,7 @@ impl Div for Scalar {
             left_child: Some(self),
             right_child: Some(other),
             ops: Ops::Div,
+            visited_in_backprop: false,
         })))
     }
 }
@@ -258,6 +269,7 @@ impl<'a, 'b> Div<&'b Scalar> for &'a Scalar {
             left_child: Some(Scalar(Rc::clone(&self.0))),
             right_child: Some(Scalar(Rc::clone(&other.0))),
             ops: Ops::Div,
+            visited_in_backprop: false,
         })))
     }
 }
@@ -267,8 +279,8 @@ impl fmt::Display for Scalar {
         let scalar = self.0.borrow();
         write!(
             f,
-            "Scalar(data={}, grad={}, ops={:?})",
-            scalar.data, scalar.grad, scalar.ops,
+            "Scalar(data={}, grad={}, ops={:?}, vis_in_b={})",
+            scalar.data, scalar.grad, scalar.ops, scalar.visited_in_backprop,
         )
     }
 }
@@ -277,8 +289,8 @@ impl fmt::Display for ScalarData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Scalar(data={}, grad={}, ops={:?})",
-            self.data, self.grad, self.ops,
+            "Scalar(data={}, grad={}, ops={:?}, vis_in_b={})",
+            self.data, self.grad, self.ops, self.visited_in_backprop,
         )
     }
 }
