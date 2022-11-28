@@ -110,6 +110,10 @@ impl Scalar {
         })))
     }
 
+    pub fn grad(self) -> f32 {
+        self.0.borrow().grad
+    }
+
     pub fn tanh(self) -> Scalar {
         let data = self.0.borrow().data.tanh();
         Scalar(Rc::new(RefCell::new(ScalarData {
@@ -182,7 +186,7 @@ impl Scalar {
         while ordered_graph.len() > 0 {
             let s = ordered_graph.pop().unwrap();
             compute_grad(&mut s.0.borrow_mut());
-            println!("{}", s);
+            // println!("{}", s); // TODO: Check for the VERBOSE environnement variable
         }
     }
 }
@@ -202,6 +206,27 @@ impl Add for Scalar {
     }
 }
 
+impl Add<f32> for Scalar {
+    type Output = Self;
+    fn add(self, other: f32) -> Self {
+        Scalar(Rc::new(RefCell::new(ScalarData {
+            data: self.0.borrow().data + other,
+            grad: 0.0,
+            left_child: Some(Scalar(Rc::clone(&self.0))),
+            right_child: Some(Scalar(Rc::new(RefCell::new(ScalarData {
+                data: other,
+                grad: 0.0,
+                left_child: None,
+                right_child: None,
+                ops: Ops::Nil,
+                visited_in_backprop: false,
+            })))),
+            ops: Ops::Add,
+            visited_in_backprop: false,
+        })))
+    }
+}
+
 impl<'a, 'b> Add<&'b Scalar> for &'a Scalar {
     type Output = Scalar;
 
@@ -211,6 +236,28 @@ impl<'a, 'b> Add<&'b Scalar> for &'a Scalar {
             grad: 0.0,
             left_child: Some(Scalar(Rc::clone(&self.0))),
             right_child: Some(Scalar(Rc::clone(&other.0))),
+            ops: Ops::Add,
+            visited_in_backprop: false,
+        })))
+    }
+}
+
+impl<'a, 'b> Add<f32> for &'a Scalar {
+    type Output = Scalar;
+
+    fn add(self, other: f32) -> Scalar {
+        Scalar(Rc::new(RefCell::new(ScalarData {
+            data: self.0.borrow().data + other,
+            grad: 0.0,
+            left_child: Some(Scalar(Rc::clone(&self.0))),
+            right_child: Some(Scalar(Rc::new(RefCell::new(ScalarData {
+                data: other,
+                grad: 0.0,
+                left_child: None,
+                right_child: None,
+                ops: Ops::Nil,
+                visited_in_backprop: false,
+            })))),
             ops: Ops::Add,
             visited_in_backprop: false,
         })))
