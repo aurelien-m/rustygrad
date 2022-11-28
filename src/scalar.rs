@@ -164,7 +164,10 @@ impl Scalar {
                 scalar.0.borrow_mut().visited_in_backprop = true;
 
                 if !scalar.0.borrow().right_child.is_none() {
-                    back(scalar.0.borrow().right_child.clone().unwrap(), ordered_graph);
+                    back(
+                        scalar.0.borrow().right_child.clone().unwrap(),
+                        ordered_graph,
+                    );
                 }
                 if !scalar.0.borrow().left_child.is_none() {
                     back(scalar.0.borrow().left_child.clone().unwrap(), ordered_graph);
@@ -229,6 +232,27 @@ impl Mul for Scalar {
     }
 }
 
+impl Mul<f32> for Scalar {
+    type Output = Self;
+    fn mul(self, other: f32) -> Self {
+        Scalar(Rc::new(RefCell::new(ScalarData {
+            data: self.0.borrow().data * other,
+            grad: 0.0,
+            left_child: Some(Scalar(Rc::clone(&self.0))),
+            right_child: Some(Scalar(Rc::new(RefCell::new(ScalarData {
+                data: other,
+                grad: 0.0,
+                left_child: None,
+                right_child: None,
+                ops: Ops::Nil,
+                visited_in_backprop: false,
+            })))),
+            ops: Ops::Mul,
+            visited_in_backprop: false,
+        })))
+    }
+}
+
 impl<'a, 'b> Mul<&'b Scalar> for &'a Scalar {
     type Output = Scalar;
 
@@ -238,6 +262,28 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a Scalar {
             grad: 0.0,
             left_child: Some(Scalar(Rc::clone(&self.0))),
             right_child: Some(Scalar(Rc::clone(&other.0))),
+            ops: Ops::Mul,
+            visited_in_backprop: false,
+        })))
+    }
+}
+
+impl<'a, 'b> Mul<f32> for &'a Scalar {
+    type Output = Scalar;
+
+    fn mul(self, other: f32) -> Scalar {
+        Scalar(Rc::new(RefCell::new(ScalarData {
+            data: self.0.borrow().data * other,
+            grad: 0.0,
+            left_child: Some(Scalar(Rc::clone(&self.0))),
+            right_child: Some(Scalar(Rc::new(RefCell::new(ScalarData {
+                data: other,
+                grad: 0.0,
+                left_child: None,
+                right_child: None,
+                ops: Ops::Nil,
+                visited_in_backprop: false,
+            })))),
             ops: Ops::Mul,
             visited_in_backprop: false,
         })))
