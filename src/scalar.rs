@@ -1,11 +1,12 @@
 use std::cell::RefCell;
 use std::fmt;
-use std::ops::{Add, Div, Mul};
+use std::ops::{Add, Sub, Div, Mul};
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 enum Ops {
     Add,
+    Sub,
     Mul,
     Div,
     Tanh,
@@ -40,6 +41,14 @@ fn compute_grad(scalar: &mut ScalarData) {
 
             scalar.left_child.as_ref().unwrap().0.borrow_mut().grad += scalar.grad;
             scalar.right_child.as_ref().unwrap().0.borrow_mut().grad += scalar.grad;
+        }
+        Ops::Sub => {
+            if scalar.left_child.is_none() || scalar.right_child.is_none() {
+                return;
+            }
+
+            scalar.left_child.as_ref().unwrap().0.borrow_mut().grad += scalar.grad;
+            scalar.right_child.as_ref().unwrap().0.borrow_mut().grad -= scalar.grad;
         }
         Ops::Mul => {
             if scalar.left_child.is_none() || scalar.right_child.is_none() {
@@ -259,6 +268,79 @@ impl<'a, 'b> Add<f32> for &'a Scalar {
                 visited_in_backprop: false,
             })))),
             ops: Ops::Add,
+            visited_in_backprop: false,
+        })))
+    }
+}
+
+impl Sub for Scalar {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+        let data = self.0.borrow().data - other.0.borrow().data;
+        Scalar(Rc::new(RefCell::new(ScalarData {
+            data,
+            grad: 0.0,
+            left_child: Some(self),
+            right_child: Some(other),
+            ops: Ops::Sub,
+            visited_in_backprop: false,
+        })))
+    }
+}
+
+impl Sub<f32> for Scalar {
+    type Output = Self;
+    fn sub(self, other: f32) -> Self {
+        Scalar(Rc::new(RefCell::new(ScalarData {
+            data: self.0.borrow().data - other,
+            grad: 0.0,
+            left_child: Some(Scalar(Rc::clone(&self.0))),
+            right_child: Some(Scalar(Rc::new(RefCell::new(ScalarData {
+                data: other,
+                grad: 0.0,
+                left_child: None,
+                right_child: None,
+                ops: Ops::Nil,
+                visited_in_backprop: false,
+            })))),
+            ops: Ops::Sub,
+            visited_in_backprop: false,
+        })))
+    }
+}
+
+impl<'a, 'b> Sub<&'b Scalar> for &'a Scalar {
+    type Output = Scalar;
+
+    fn sub(self, other: &'b Scalar) -> Scalar {
+        Scalar(Rc::new(RefCell::new(ScalarData {
+            data: self.0.borrow().data - other.0.borrow().data,
+            grad: 0.0,
+            left_child: Some(Scalar(Rc::clone(&self.0))),
+            right_child: Some(Scalar(Rc::clone(&other.0))),
+            ops: Ops::Sub,
+            visited_in_backprop: false,
+        })))
+    }
+}
+
+impl<'a, 'b> Sub<f32> for &'a Scalar {
+    type Output = Scalar;
+
+    fn sub(self, other: f32) -> Scalar {
+        Scalar(Rc::new(RefCell::new(ScalarData {
+            data: self.0.borrow().data - other,
+            grad: 0.0,
+            left_child: Some(Scalar(Rc::clone(&self.0))),
+            right_child: Some(Scalar(Rc::new(RefCell::new(ScalarData {
+                data: other,
+                grad: 0.0,
+                left_child: None,
+                right_child: None,
+                ops: Ops::Nil,
+                visited_in_backprop: false,
+            })))),
+            ops: Ops::Sub,
             visited_in_backprop: false,
         })))
     }
