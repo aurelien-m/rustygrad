@@ -123,6 +123,10 @@ impl Scalar {
         self.0.borrow().grad
     }
 
+    pub fn data(self) -> f32 {
+        self.0.borrow().data
+    }
+
     pub fn tanh(self) -> Scalar {
         let data = self.0.borrow().data.tanh();
         Scalar(Rc::new(RefCell::new(ScalarData {
@@ -467,5 +471,16 @@ impl fmt::Display for ScalarData {
             "Scalar(data={}, grad={}, ops={:?}, vis_in_b={})",
             self.data, self.grad, self.ops, self.visited_in_backprop,
         )
+    }
+}
+
+impl fmt::Debug for Scalar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let scalar = self.0.borrow();
+
+        f.debug_struct("Scalar")
+         .field("data", &scalar.data)
+         .field("grad", &scalar.grad)
+         .finish()
     }
 }
