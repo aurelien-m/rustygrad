@@ -119,11 +119,11 @@ impl Scalar {
         })))
     }
 
-    pub fn grad(self) -> f32 {
+    pub fn grad(&self) -> f32 {
         self.0.borrow().grad
     }
 
-    pub fn data(self) -> f32 {
+    pub fn data(&self) -> f32 {
         self.0.borrow().data
     }
 
