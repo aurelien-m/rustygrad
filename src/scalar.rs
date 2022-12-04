@@ -18,6 +18,15 @@ enum Ops {
 #[derive(Clone)]
 pub struct Scalar(Rc<RefCell<ScalarData>>);
 
+macro_rules! svec {
+    // The macro takes a list of integers as an argument
+    ($($x:expr),*) => {
+        // Use the vec! macro to create a Vec of MyStruct from the list of integers
+        vec![$(scalar::Scalar::new($x)),*]
+    }
+}
+pub(crate) use svec;
+
 #[derive(Clone)]
 pub struct ScalarData {
     data: f32,
@@ -125,6 +134,14 @@ impl Scalar {
 
     pub fn data(&self) -> f32 {
         self.0.borrow().data
+    }
+
+    pub fn set_data(&self, data: f32) {
+        self.0.borrow_mut().data = data;
+    }
+
+    pub fn zero_grad(&self) {
+        self.0.borrow_mut().grad = 0.0;
     }
 
     pub fn tanh(self) -> Scalar {
