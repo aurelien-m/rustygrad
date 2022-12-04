@@ -18,6 +18,15 @@ enum Ops {
 #[derive(Clone)]
 pub struct Scalar(Rc<RefCell<ScalarData>>);
 
+macro_rules! svec {
+    // The macro takes a list of integers as an argument
+    ($($x:expr),*) => {
+        // Use the vec! macro to create a Vec of MyStruct from the list of integers
+        vec![$(scalar::Scalar::new($x)),*]
+    }
+}
+pub(crate) use svec;
+
 #[derive(Clone)]
 pub struct ScalarData {
     data: f32,
@@ -119,8 +128,20 @@ impl Scalar {
         })))
     }
 
-    pub fn grad(self) -> f32 {
+    pub fn grad(&self) -> f32 {
         self.0.borrow().grad
+    }
+
+    pub fn data(&self) -> f32 {
+        self.0.borrow().data
+    }
+
+    pub fn set_data(&self, data: f32) {
+        self.0.borrow_mut().data = data;
+    }
+
+    pub fn zero_grad(&self) {
+        self.0.borrow_mut().grad = 0.0;
     }
 
     pub fn tanh(self) -> Scalar {
@@ -467,5 +488,16 @@ impl fmt::Display for ScalarData {
             "Scalar(data={}, grad={}, ops={:?}, vis_in_b={})",
             self.data, self.grad, self.ops, self.visited_in_backprop,
         )
+    }
+}
+
+impl fmt::Debug for Scalar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let scalar = self.0.borrow();
+
+        f.debug_struct("Scalar")
+         .field("data", &scalar.data)
+         .field("grad", &scalar.grad)
+         .finish()
     }
 }
