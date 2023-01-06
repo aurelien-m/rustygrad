@@ -44,6 +44,10 @@ impl Scalar {
         self.0.borrow().data
     }
 
+    pub fn set_data(&self, data: f32) {
+        self.0.borrow_mut().data = data;
+    }
+
     pub fn grad(&self) -> f32 {
         self.0.borrow().grad
     }
@@ -84,6 +88,10 @@ impl Scalar {
         (self.0.borrow().compute_grad)(self)
     }
 
+    pub fn zero_grad(&self) {
+        self.0.borrow_mut().grad = 0.0;
+    }
+
     pub fn backward(&mut self) {
         self.set_grad(1.0);
 
@@ -107,6 +115,7 @@ impl Scalar {
         while ordered_graph.len() > 0 {
             let s = ordered_graph.pop().unwrap();
             let (left_grad, right_grad) = s.compute_grad();
+            s.set_visited(false);
 
             if !s.is_left_child_none() {
                 s.left_child().unwrap().add_to_grad(left_grad);

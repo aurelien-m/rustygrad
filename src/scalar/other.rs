@@ -32,7 +32,7 @@ impl Scalar {
             data: self.data().powf(power),
             grad: 0.0,
             left_child: Some(self.clone()),
-            right_child: None,
+            right_child: Some(Scalar::new(power)),
             visited_in_backprop: false,
             compute_grad: |scalar| {
                 if scalar.is_left_child_none() || scalar.is_right_child_none() {
