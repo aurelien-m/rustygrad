@@ -1,18 +1,19 @@
 mod nn;
 mod scalar;
+use scalar::Scalar;
 
 #[macro_use]
 extern crate is_close;
 
 fn main() {
     // Autograd example
-    let x1 = scalar::Scalar::new(2.0);
-    let x2 = scalar::Scalar::new(0.0);
+    let x1 = Scalar::new(2.0);
+    let x2 = Scalar::new(0.0);
 
-    let w1 = scalar::Scalar::new(-3.0);
-    let w2 = scalar::Scalar::new(1.0);
+    let w1 = Scalar::new(-3.0);
+    let w2 = Scalar::new(1.0);
 
-    let b = scalar::Scalar::new(6.8813735870195432);
+    let b = Scalar::new(6.8813735870195432);
 
     let n = (&x1 * &w1) + (&x2 * &w2) + b;
     let e = (n * 2.0).exp();
@@ -63,6 +64,7 @@ fn main() {
         for param in model.parameters() {
             param.set_data(param.data() - 0.1 * param.grad());
         }
+        println!("{}, {}", model.parameters()[0].data(), model.parameters()[0].grad());
 
         println!("{}/{} | loss: {}", i, iterations, loss.data());
     }
